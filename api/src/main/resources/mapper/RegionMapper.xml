@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.RegionMapper">
+
+    <resultMap id="regionVOMap" type="com.kmbeast.pojo.vo.RegionVO">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="level" property="level"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="has_children" property="hasChildren"/>
+    </resultMap>
+
+    <select id="selectRegionList" resultMap="regionVOMap">
+        SELECT
+        r.id,
+        r.name,
+        r.level,
+        r.parent_id,
+        (SELECT COUNT(*) > 0
+        FROM region c
+        WHERE c.parent_id = r.id) as has_children
+        FROM region r
+        <where>
+            <if test="name != null and name != ''">
+                AND r.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="level != null">
+                AND r.level = #{level}
+            </if>
+            <if test="parentId != null">
+                AND r.parent_id = #{parentId}
+            </if>
+        </where>
+        ORDER BY r.level, r.name
+        <if test="current != null and size != null">
+            LIMIT #{size} OFFSET #{current}
+        </if>
+    </select>
+
+    <!-- 对应的 count 查询也需要调整 -->
+    <select id="selectRegionListCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM region r
+        <where>
+            <if test="name != null and name != ''">
+                AND r.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="level != null">
+                AND r.level = #{level}
+            </if>
+            <if test="parentId != null">
+                AND r.parent_id = #{parentId}
+            </if>
+        </where>
+    </select>
+
+</mapper>

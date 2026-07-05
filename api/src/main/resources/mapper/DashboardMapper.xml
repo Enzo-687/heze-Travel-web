@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.DashboardMapper">
+
+
+    <select id="staticValues" resultType="com.kmbeast.pojo.vo.ValuesVO">
+        SELECT 'users' AS name, COUNT(*) AS value
+        FROM user
+        UNION ALL
+        SELECT 'scenic_spots' AS name, COUNT(*) AS value
+        FROM scenic_spot
+        UNION ALL
+        SELECT 'strategies' AS name, COUNT(*) AS value
+        FROM scenic_spot_strategy
+        UNION ALL
+        SELECT 'tickets' AS name, COUNT(*) AS value
+        FROM scenic_spot_ticket
+        UNION ALL
+        SELECT 'ticket_orders' AS name, COUNT(*) AS value
+        FROM scenic_spot_ticket_order
+        UNION ALL
+        SELECT 'routes' AS name, COUNT(*) AS value
+        FROM scenic_spot_route_nodes
+    </select>
+
+    <select id="pieValues" resultType="com.kmbeast.pojo.vo.ValuesVO">
+        SELECT
+            CASE u.gender
+                WHEN 1 THEN '女'
+                WHEN 2 THEN '男'
+                END AS name,
+            COUNT(*) AS value
+        FROM user u
+        WHERE u.gender IN (1, 2)
+        GROUP BY u.gender
+        ORDER BY u.gender
+    </select>
+
+
+</mapper>

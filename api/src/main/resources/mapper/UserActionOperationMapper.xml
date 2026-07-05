@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.UserActionOperationMapper">
+
+    <resultMap id="entityMap" type="com.kmbeast.pojo.entity.UserActionOperation">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="content_modules" property="contentModule"/>
+        <result column="content_id" property="contentId"/>
+        <result column="type" property="type"/>
+        <result column="stay_time" property="stayTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+
+    <select id="getContentIds" resultType="java.lang.Integer">
+        SELECT content_id AS contentId
+        FROM user_action_operation
+        WHERE content_module = #{contentModule}
+          AND user_id = #{userId}
+          AND type = #{type}
+    </select>
+
+    <select id="scores" resultType="com.kmbeast.pojo.vo.ScoreVO">
+        SELECT
+        user_id AS userId,
+        content_id AS contentId,
+        LEAST(5.0, -- 评分上限为5分
+        (
+        -- 浏览权重35% + 收藏权重65% + 停留时间加成
+        total_views * 0.35 +
+        total_collects * 0.65 +
+        CASE
+        WHEN total_duration
+        &lt;
+        6000 THEN 0.0
+        WHEN total_duration
+        &lt;
+        20000 THEN 0.5
+        WHEN total_duration
+            &lt;
+        60000 THEN 1.0
+        ELSE 1.5
+        END
+        ) / GREATEST(1, (total_views + total_collects)) * 5.0
+        ) AS score
+        FROM (
+        SELECT
+        user_id,
+        content_id,
+        -- 浏览数（type=3）
+        SUM(CASE WHEN type = 3 THEN 1 ELSE 0 END) AS total_views,
+        -- 收藏数（type=1）
+        SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) AS total_collects,
+        -- 总停留时间（type=4）
+        SUM(CASE WHEN type = 4 THEN COALESCE(stay_time, 0) ELSE 0 END) AS total_duration,
+        -- 总行为数
+        COUNT(*) AS total_actions
+        FROM user_action_operation
+        WHERE type IN (1, 3, 4) -- 只考虑收藏、浏览、停留行为
+        AND content_module = #{contentModule}
+        AND content_id IS NOT NULL
+        AND user_id IS NOT NULL
+        GROUP BY user_id, content_id
+        HAVING total_views > 0 OR total_collects > 0 -- 至少有一次浏览或收藏
+        ) AS aggregated_data
+        ORDER BY score DESC, total_actions DESC;
+    </select>
+
+
+    <select id="hotContentList" resultType="com.kmbeast.pojo.vo.ContentHotScoreVO">
+        SELECT content_id,
+               SUM(
+                       CASE type
+                           WHEN 1 THEN 5 -- 收藏，权重5
+                           WHEN 2 THEN 3 -- 点赞，权重3
+                           WHEN 3 THEN 1 -- 浏览，权重1
+                           WHEN 4 THEN
+                               CASE
+                                   WHEN stay_time IS NULL THEN 0
+                                   WHEN stay_time &lt; 1000 THEN 1 -- 停留1秒以内
+                                   WHEN stay_time &lt; 5000 THEN 2 -- 停留1-5秒
+                                   WHEN stay_time &lt; 15000 THEN 3 -- 停留5-15秒
+                                   WHEN stay_time &lt; 30000 THEN 4 -- 停留15-30秒
+                                   WHEN stay_time &lt; 60000 THEN 5 -- 停留30-60秒
+                                   ELSE 6 -- 停留60秒以上
+                                   END
+                           ELSE 0
+                           END
+               ) AS hot_score
+        FROM user_action_operation
+        WHERE type IN (1, 2, 3, 4)
+          AND content_module = #{contentModule}
+        GROUP BY content_id
+        ORDER BY hot_score DESC
+        LIMIT #{current},#{size}
+    </select>
+
+</mapper>

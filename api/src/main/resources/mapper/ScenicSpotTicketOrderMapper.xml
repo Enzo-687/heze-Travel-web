@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.ScenicSpotTicketOrderMapper">
+
+    <resultMap id="entityMap" type="com.kmbeast.pojo.vo.ScenicSpotTicketOrderVO">
+        <!--景点门票基本信息-->
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="scenic_spot_ticket_id" property="scenicSpotTicketId"/>
+        <result column="status" property="status"/>
+        <result column="buy_number" property="buyNumber"/>
+        <result column="price" property="price"/>
+        <result column="concat_phone" property="concatPhone"/>
+        <result column="concat_username" property="concatUsername"/>
+        <result column="idcard" property="idcard"/>
+        <result column="create_time" property="createTime"/>
+        <result column="pay_time" property="payTime"/>
+        <result column="use_time" property="useTime"/>
+        <result column="cancel_time" property="cancelTime"/>
+        <!--用户信息-->
+        <result column="username" property="username"/>
+        <result column="avatar" property="avatar"/>
+        <!--关联的景点门票信息-->
+        <result column="detail" property="detail"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <!--退款记录列表-->
+        <collection property="orderRefundInfoList" ofType="com.kmbeast.pojo.entity.OrderRefundInfo">
+            <id column="refund_id" property="id"/>
+            <result column="refund_ticket_order_id" property="ticketOrderId"/>
+            <result column="refund_status" property="status"/>
+            <result column="refund_reject_reason" property="rejectReason"/>
+            <result column="refund_time" property="refundTime"/>
+            <result column="refund_reject_refund_time" property="rejectRefundTime"/>
+            <result column="refund_create_time" property="createTime"/>
+        </collection>
+    </resultMap>
+
+    <update id="batchUpdateStatus">
+        UPDATE scenic_spot_ticket_order SET status = #{status} AND cancel_time = #{time} WHERE id IN
+        <foreach collection="ids" separator="," item="id" open="(" close=")" index="index">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <delete id="removeByTicketIds">
+
+        DELETE FROM scenic_spot_ticket_order WHERE scenic_spot_ticket_id IN
+        <foreach collection="ticketIds" item="ticketId" index="index" open="(" close=")" separator=",">
+            #{ticketId}
+        </foreach>
+
+    </delete>
+
+    <select id="queryPage" resultMap="entityMap">
+
+        SELECT ssto.*,
+        u.username,
+        u.avatar,
+        sst.detail,
+        sst.start_date,
+        sst.end_date,
+        ori.id AS refund_id,
+        ori.ticket_order_id AS refund_ticket_order_id,
+        ori.status AS refund_status,
+        ori.reject_reason AS refund_reject_reason,
+        ori.reject_refund_time AS refund_reject_refund_time,
+        ori.refund_time AS refund_time,
+        ori.create_time AS refund_create_time
+        FROM scenic_spot_ticket_order ssto
+        LEFT JOIN user u ON u.id = ssto.user_id
+        LEFT JOIN scenic_spot_ticket sst ON sst.id = ssto.scenic_spot_ticket_id
+        LEFT JOIN order_refund_info ori ON ori.ticket_order_id = ssto.id
+        <where>
+            <if test="scenicSpotTicketId != null">
+                AND ssto.scenic_id = #{scenicSpotTicketId}
+            </if>
+            <if test="status != null">
+                AND ssto.status = #{status}
+            </if>
+            <if test="statusList != null and statusList.size()>0">
+                AND ssto.status IN
+                <foreach collection="statusList" item="statusItem" index="index" open="(" close=")" separator=",">
+                    #{statusItem}
+                </foreach>
+            </if>
+            <if test="userId != null">
+                AND ssto.user_id = #{userId}
+            </if>
+            <if test="minPrice != null and maxPrice != ''">
+                AND ssto.price BETWEEN #{minPrice} AND #{maxPrice}
+            </if>
+            <if test="startTime != null and endTime != null">
+                AND ssto.create_time BETWEEN #{startTime} AND #{endTime}
+            </if>
+            <if test="refundStatus != null">
+                AND EXISTS (
+                    SELECT 1 FROM order_refund_info ori1
+                    WHERE ori1.ticket_order_id = ssto.id
+                    AND ori1.status = #{refundStatus}
+                    AND ori1.create_time = (
+                        SELECT MAX(ori2.create_time) FROM order_refund_info ori2
+                        WHERE ori2.ticket_order_id = ssto.id
+                    )
+                )
+            </if>
+        </where>
+        ORDER BY ssto.create_time DESC
+        <if test="current != null and size != null">
+            LIMIT #{current},#{size}
+        </if>
+
+    </select>
+
+    <select id="queryPageCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM scenic_spot_ticket_order ssto
+        <where>
+            <if test="scenicSpotTicketId != null">
+                AND ssto.scenic_id = #{scenicSpotTicketId}
+            </if>
+            <if test="status != null">
+                AND ssto.status = #{status}
+            </if>
+            <if test="statusList != null and statusList.size()>0">
+                AND ssto.status IN
+                <foreach collection="statusList" item="statusItem" index="index" open="(" close=")" separator=",">
+                    #{statusItem}
+                </foreach>
+            </if>
+            <if test="userId != null">
+                AND ssto.user_id = #{userId}
+            </if>
+            <if test="minPrice != null and maxPrice != ''">
+                AND ssto.price BETWEEN #{minPrice} AND #{maxPrice}
+            </if>
+            <if test="startTime != null and endTime != null">
+                AND ssto.create_time BETWEEN #{startTime} AND #{endTime}
+            </if>
+            <if test="refundStatus != null">
+                AND EXISTS (
+                SELECT 1 FROM order_refund_info ori1
+                WHERE ori1.ticket_order_id = ssto.id
+                AND ori1.status = #{refundStatus}
+                AND ori1.create_time = (
+                SELECT MAX(ori2.create_time) FROM order_refund_info ori2
+                WHERE ori2.ticket_order_id = ssto.id
+                )
+                )
+            </if>
+        </where>
+    </select>
+
+    <select id="getOrdersByStatus" resultType="com.kmbeast.pojo.vo.ScenicSpotTicketOrderTimerVO">
+        SELECT ssto.id,
+               ssto.scenic_spot_ticket_id AS scenicSpotTicketId,
+               ssto.buy_number            AS buyNumber,
+               ssto.create_time           AS createTime
+        FROM scenic_spot_ticket_order ssto
+        WHERE status = ${status}
+    </select>
+
+</mapper>

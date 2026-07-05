@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.ScenicSpotStrategyMapper">
+
+<!--    <sql id="BaseField">-->
+<!--        # 这里的sss爆红，可不做理会，显示问题而已-->
+<!--        sss.id,-->
+<!--        sss.title,-->
+<!--        sss.cover,-->
+<!--        sss.summary,-->
+<!--        sss.create_time AS createTime,-->
+<!--        u.avatar,-->
+<!--        u.username-->
+<!--    </sql>-->
+
+<!--    <sql id="DetailField">-->
+<!--        # 这里的sss爆红，可不做理会，显示问题而已-->
+<!--        sss.id,-->
+<!--        sss.title,-->
+<!--        sss.cover,-->
+<!--        sss.summary,-->
+<!--        sss.create_time AS createTime,-->
+<!--        sss.scenic_spot_id AS scenicSpotId,-->
+<!--        sss.user_id AS userId,-->
+<!--        u.avatar,-->
+<!--        u.username,-->
+<!--        ss.title AS scenicSpotTitle-->
+<!--    </sql>-->
+
+    <select id="queryList" resultType="com.kmbeast.pojo.vo.ScenicSpotStrategyListVO">
+
+        SELECT
+        sss.id,
+        sss.title,
+        sss.cover,
+        sss.audit_status AS auditStatus,
+        sss.summary,
+        sss.create_time AS createTime,
+        u.avatar,
+        u.username
+        FROM scenic_spot_strategy sss
+        LEFT JOIN user u ON u.id = sss.user_id
+        <where>
+            <if test="title != null and title != ''">
+                AND sss.title LIKE concat('%',#{title},'%')
+            </if>
+            <if test="scenicSpotId != null">
+                AND sss.scenic_spot_id = #{scenicSpotId}
+            </if>
+            <if test="userId != null">
+                AND sss.user_id = #{userId}
+            </if>
+            <if test="auditStatus != null">
+                AND sss.audit_status = #{auditStatus}
+            </if>
+            <if test="startTime != null and endTime != null">
+                AND sss.create_time BETWEEN #{startTime} AND #{endTime}
+            </if>
+            <if test="ids != null and ids.size()>0">
+                AND sss.id IN
+                <foreach collection="ids" item="id" index="index" separator="," open="(" close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+        ORDER BY sss.create_time DESC
+        <if test="current != null and size != null">
+            LIMIT #{current},#{size}
+        </if>
+
+    </select>
+
+    <select id="queryListCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM scenic_spot_strategy sss
+        <where>
+            <if test="title != null and title != ''">
+                AND sss.title LIKE concat('%',#{title},'%')
+            </if>
+            <if test="scenicSpotId != null">
+                AND sss.scenic_spot_id = #{scenicSpotId}
+            </if>
+            <if test="userId != null">
+                AND sss.user_id = #{userId}
+            </if>
+            <if test="auditStatus != null">
+                AND sss.audit_status = #{auditStatus}
+            </if>
+            <if test="startTime != null and endTime != null">
+                AND sss.create_time BETWEEN #{startTime} AND #{endTime}
+            </if>
+            <if test="ids != null and ids.size()>0">
+                AND sss.id IN
+                <foreach collection="ids" item="id" index="index" separator="," open="(" close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <!--通过ID查询景点攻略详情-->
+    <select id="detail" resultType="com.kmbeast.pojo.vo.ScenicSpotStrategyDetailVO">
+        SELECT
+            sss.id,
+            sss.title,
+            sss.cover,
+            sss.content,
+            sss.summary,
+            sss.create_time AS createTime,
+            sss.scenic_spot_id AS scenicSpotId,
+            sss.user_id AS userId,
+            u.avatar,
+            u.username,
+            ss.title AS scenicSpotTitle,
+            (SELECT COUNT(uao1.id) FROM user_action_operation uao1 WHERE uao1.type = 3 AND uao1.content_module = 'SCENIC_SPOT_STRATEGY' AND uao1.content_id = sss.id) AS viewCount,
+            (SELECT COUNT(uao2.id) FROM user_action_operation uao2 WHERE uao2.type = 2 AND uao2.content_module = 'SCENIC_SPOT_STRATEGY' AND uao2.content_id = sss.id) AS upvoteCount,
+            (SELECT COUNT(uao3.id) FROM user_action_operation uao3 WHERE uao3.type = 1 AND uao3.content_module = 'SCENIC_SPOT_STRATEGY' AND uao3.content_id = sss.id) AS collectionCount
+        FROM scenic_spot_strategy sss
+        LEFT JOIN user u ON u.id = sss.user_id
+        LEFT JOIN scenic_spot ss ON ss.id = sss.scenic_spot_id
+        WHERE sss.id = #{id}
+    </select>
+
+</mapper>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.ScenicSpotTicketMapper">
+
+    <resultMap id="entityMap" type="com.kmbeast.pojo.entity.ScenicSpotTicket">
+        <id column="id" property="id"/>
+        <result column="scenic_id" property="scenicId"/>
+        <result column="total_number" property="totalNumber"/>
+        <result column="price" property="price"/>
+        <result column="detail" property="detail"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <update id="batchUpdateStore">
+        UPDATE scenic_spot_ticket
+        SET total_number = CASE id
+        <foreach collection="list" item="item">
+            WHEN #{item.id} THEN #{item.totalNumber}
+        </foreach>
+        ELSE total_number
+        END
+        WHERE id IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
+    <delete id="removeTicketOrdersByTicketId">
+        DELETE FROM scenic_spot_ticket_order WHERE scenic_spot_ticket_id = #{ticketId}
+    </delete>
+
+    <delete id="removeTicketOrdersByTicketIds">
+        DELETE FROM scenic_spot_ticket_order WHERE scenic_spot_ticket_id IN
+        <foreach collection="ticketIds" item="ticketId" separator="," open="(" close=")" index="index">
+            #{ticketId}
+        </foreach>
+    </delete>
+
+    <select id="queryPage" resultMap="entityMap">
+
+        SELECT sst.*
+        FROM scenic_spot_ticket sst
+        <where>
+            <if test="scenicSpotId != null">
+                AND sst.scenic_id = #{scenicSpotId}
+            </if>
+            <if test="status != null">
+                AND sst.status = #{status}
+            </if>
+            <if test="minPrice != null and maxPrice != ''">
+                AND sst.price BETWEEN #{minPrice} AND #{maxPrice}
+            </if>
+            <if test="ids != null and ids.size()>0">
+                AND sst.id IN
+                <foreach collection="ids" item="id" separator="," open="(" close=")" index="index">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+        <if test="current != null and size != null">
+            LIMIT #{current},#{size}
+        </if>
+
+    </select>
+
+    <select id="queryPageCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM scenic_spot_ticket sst
+        <where>
+            <if test="scenicSpotId != null">
+                AND sst.scenic_id = #{scenicSpotId}
+            </if>
+            <if test="status != null">
+                AND sst.status = #{status}
+            </if>
+            <if test="minPrice != null and maxPrice != ''">
+                AND sst.price BETWEEN #{minPrice} AND #{maxPrice}
+            </if>
+        </where>
+    </select>
+
+</mapper>

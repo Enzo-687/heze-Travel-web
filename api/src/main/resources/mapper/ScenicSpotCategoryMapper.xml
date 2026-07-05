@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.ScenicSpotCategoryMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO scenic_spot_category (scenic_spot_id,category_id) VALUES
+        <foreach collection="ScenicSpotCategories" item="item" index="index" separator=",">
+            (#{item.scenicSpotId},#{item.categoryId})
+        </foreach>
+    </insert>
+
+</mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kmbeast.mapper.ScenicSpotBrochuresMapper">
+
+    <resultMap id="entityMap" type="com.kmbeast.pojo.entity.ScenicSpotBrochure">
+        <id column="id" property="id"/>
+        <result column="scenic_spot_id" property="scenicSpotId"/>
+        <result column="cover_url" property="coverUrl"/>
+        <result column="order_number" property="orderNumber"/>
+    </resultMap>
+
+    <insert id="batchSave">
+        INSERT INTO scenic_spot_brochure (scenic_spot_id,cover_url,order_number) VALUES
+        <foreach collection="scenicSpotBrochureList" item="brochure" index="index" separator=",">
+            (#{brochure.scenicSpotId},#{brochure.coverUrl},#{brochure.orderNumber})
+        </foreach>
+    </insert>
+
+    <select id="pageList" resultMap="entityMap">
+
+        SELECT ssb.id,
+        ssb.scenic_spot_id,
+        ssb.cover_url,
+        ssb.order_number
+        FROM scenic_spot_brochure ssb
+        <where>
+            <if test="scenicSpotId != null">
+                AND ssb.scenic_spot_id = #{scenicSpotId}
+            </if>
+        </where>
+        <if test="current != null and size != null">
+            LIMIT #{current},#{size}
+        </if>
+
+    </select>
+
+    <select id="pageListCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM scenic_spot_brochure ssb
+        <where>
+            <if test="scenicSpotId != null">
+                AND ssb.scenic_spot_id = #{scenicSpotId}
+            </if>
+        </where>
+    </select>
+
+</mapper>
