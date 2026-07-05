@@ -17,5 +17,8 @@ dist/
 .env.local
 .env.*.local
 
+# ESLint缓存
+.eslintcache
+
 # 上传的图片文件（体积大，不上传）
 api/file/
